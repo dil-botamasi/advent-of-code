@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 04 Part 2 - Paper Roll Removal Visualization</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0f0f23;
+            color: #cccccc;
+            padding: 20px;
+            margin: 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #00cc00;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .stats {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .stats span {
+            margin: 0 15px;
+        }
+        
+        .iteration {
+            color: #ffff66;
+        }
+        
+        .removed {
+            color: #ff6666;
+        }
+        
+        .total {
+            color: #66ff66;
+        }
+        
+        .grid-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .grid {
+            display: inline-block;
+            line-height: 1.5;
+            font-size: 28px;
+            letter-spacing: 4px;
+            background: #1a1a2e;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 200, 0, 0.3);
+        }
+        
+        .grid-row {
+            white-space: pre;
+        }
+        
+        .cell {
+            display: inline-block;
+            width: 32px;
+            text-align: center;
+        }
+        
+        .paper {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+        
+        .removable {
+            color: #ff4444;
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        .empty {
+            color: #333344;
+        }
+        
+        .scanning {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 0 2px #00ffff inset;
+            border-radius: 3px;
+        }
+        
+        .just-removed {
+            color: #ff0000;
+            animation: fadeOut 0.3s ease-out;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0.3; transform: scale(0.8); }
+        }
+        
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #00cc00;
+            color: #0f0f23;
+            border: none;
+            padding: 12px 24px;
+            margin: 0 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+        
+        button:disabled {
+            background: #444;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        .speed-control {
+            margin-top: 15px;
+        }
+        
+        .speed-control label {
+            margin-right: 10px;
+        }
+        
+        input[type="range"] {
+            width: 200px;
+            vertical-align: middle;
+        }
+        
+        .legend {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #1a1a2e;
+            border-radius: 5px;
+        }
+        
+        .legend-item {
+            display: inline-block;
+            margin: 0 20px;
+        }
+        
+        .legend-symbol {
+            display: inline-block;
+            width: 20px;
+            font-weight: bold;
+        }
+        
+        .warning {
+            background: #2a2a1e;
+            border-left: 4px solid #ffaa00;
+            padding: 15px;
+            margin: 20px auto;
+            max-width: 800px;
+            border-radius: 5px;
+        }
+        
+        .warning h3 {
+            margin-top: 0;
+            color: #ffaa00;
+        }
+        
+        .warning p {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧻 Paper Roll Removal Algorithm 🧻</h1>
+        
+        <div class="stats">
+            <span class="iteration">Iteration: <strong id="iteration">0</strong></span>
+            <span class="removed">Removed This Round: <strong id="removedCount">0</strong></span>
+            <span class="total">Total Removed: <strong id="totalCount">0</strong></span>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <span class="legend-symbol paper">@</span> = Paper Roll
+            </div>
+            <div class="legend-item">
+                <span class="legend-symbol empty">.</span> = Empty Space
+            </div>
+            <div class="legend-item">
+                <span class="legend-symbol removable">@</span> = Removable (< 4 neighbors)
+            </div>
+            <div class="legend-item">
+                <span class="legend-symbol" style="background: rgba(0, 255, 255, 0.3); border: 2px solid #00ffff; padding: 2px 6px; border-radius: 3px;">@</span> = Currently Scanning
+            </div>
+        </div>
+        
+        <div class="grid-container">
+            <div class="grid" id="grid"></div>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">Start</button>
+            <button id="stepBtn">Step</button>
+            <button id="resetBtn">Reset</button>
+            <div class="speed-control">
+                <label for="speedSlider">Speed:</label>
+                <input type="range" id="speedSlider" min="0.1" max="2" value="1" step="0.1">
+                <span id="speedLabel">1x</span>
+            </div>
+        </div>
+
+        <div class="warning">
+            <h3>⚠️ Why More Items Get Removed Than Highlighted</h3>
+            <p>The visualization highlights removable paper rolls <strong>before</strong> the iteration runs, based on the initial grid state. However, the algorithm removes rolls <strong>as it scans</strong> through the grid (left-to-right, top-to-bottom).</p>
+            <p>This means that when a paper roll is removed, it immediately affects the neighbor count of surrounding rolls. A roll that initially had 4+ neighbors (safe) might drop below 4 neighbors after earlier rolls in the scan are removed, making it removable during the <em>same iteration</em>.</p>
+        </div>
+    </div>
+
+    <script>
+        // Actual puzzle input
+        const inputText = `..@@.@@@@.
+@@@.@.@.@@
+@@@@@.@.@@
+@.@@@@..@.
+@@.@@@@.@@
+.@@@@@@@.@
+.@.@.@.@@@
+@.@@@.@@@@
+.@@@@@@@@.
+@.@.@@@.@.`;
+
+        let originalMap = inputText.split('\n').map(line => line.split(''));
+        let map = JSON.parse(JSON.stringify(originalMap));
+        let iteration = 0;
+        let totalRemoved = 0;
+        let isRunning = false;
+        let animationTimeout = null;
+        let speedMultiplier = 1;
+        let scanningPosition = null;
+        let justRemoved = new Set();
+
+        const gridElement = document.getElementById('grid');
+        const iterationElement = document.getElementById('iteration');
+        const removedCountElement = document.getElementById('removedCount');
+        const totalCountElement = document.getElementById('totalCount');
+        const startBtn = document.getElementById('startBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedLabel = document.getElementById('speedLabel');
+
+        speedSlider.addEventListener('input', (e) => {
+            speedMultiplier = parseFloat(e.target.value);
+            speedLabel.textContent = speedMultiplier + 'x';
+        });
+
+        function getRemovablePositions() {
+            const removable = new Set();
+            
+            for (let y = 0; y < map.length; y++) {
+                for (let x = 0; x < map[y].length; x++) {
+                    if (map[y][x] !== '@') continue;
+
+                    const neighbors = [
+                        map[y - 1]?.[x - 1] ?? '.',
+                        map[y - 1]?.[x] ?? '.',
+                        map[y - 1]?.[x + 1] ?? '.',
+                        map[y]?.[x - 1] ?? '.',
+                        map[y]?.[x + 1] ?? '.',
+                        map[y + 1]?.[x - 1] ?? '.',
+                        map[y + 1]?.[x] ?? '.',
+                        map[y + 1]?.[x + 1] ?? '.',
+                    ];
+
+                    const count = neighbors.filter(val => val === '@').length;
+                    if (count < 4) {
+                        removable.add(`${y},${x}`);
+                    }
+                }
+            }
+            
+            return removable;
+        }
+
+        function renderGrid(highlightRemovable = false) {
+            const removable = highlightRemovable ? getRemovablePositions() : new Set();
+            
+            gridElement.innerHTML = map.map((row, y) => {
+                return '<div class="grid-row">' + 
+                    row.map((cell, x) => {
+                        const isRemovable = removable.has(`${y},${x}`);
+                        const isScanning = scanningPosition && scanningPosition.y === y && scanningPosition.x === x;
+                        const wasJustRemoved = justRemoved.has(`${y},${x}`);
+                        
+                        let className = 'cell ';
+                        if (isScanning) {
+                            className += 'scanning ';
+                        }
+                        if (wasJustRemoved) {
+                            className += 'just-removed ';
+                        }
+                        
+                        if (cell === '@') {
+                            className += isRemovable ? 'removable' : 'paper';
+                        } else {
+                            className += 'empty';
+                        }
+                        return `<span class="${className}">${cell}</span>`;
+                    }).join('') + 
+                    '</div>';
+            }).join('');
+        }
+
+        async function step() {
+            let removed = 0;
+            justRemoved.clear();
+
+            for (let y = 0; y < map.length; y++) {
+                for (let x = 0; x < map[y].length; x++) {
+                    if (map[y][x] !== '@') continue;
+
+                    // Show scanning position
+                    scanningPosition = { y, x };
+                    renderGrid(false);
+                    await new Promise(resolve => setTimeout(resolve, 20 / speedMultiplier));
+
+                    const neighbors = [
+                        map[y - 1]?.[x - 1] ?? '.',
+                        map[y - 1]?.[x] ?? '.',
+                        map[y - 1]?.[x + 1] ?? '.',
+                        map[y]?.[x - 1] ?? '.',
+                        map[y]?.[x + 1] ?? '.',
+                        map[y + 1]?.[x - 1] ?? '.',
+                        map[y + 1]?.[x] ?? '.',
+                        map[y + 1]?.[x + 1] ?? '.',
+                    ];
+
+                    const count = neighbors.filter(val => val === '@').length;
+                    if (count < 4) {
+                        map[y][x] = '.';
+                        removed++;
+                        justRemoved.add(`${y},${x}`);
+                        renderGrid(false);
+                        await new Promise(resolve => setTimeout(resolve, 50 / speedMultiplier));
+                    }
+                }
+            }
+
+            scanningPosition = null;
+            justRemoved.clear();
+            totalRemoved += removed;
+            iteration++;
+            
+            iterationElement.textContent = iteration;
+            removedCountElement.textContent = removed;
+            totalCountElement.textContent = totalRemoved;
+
+            return removed;
+        }
+
+        function reset() {
+            if (animationTimeout) {
+                clearTimeout(animationTimeout);
+                animationTimeout = null;
+            }
+            isRunning = false;
+            map = JSON.parse(JSON.stringify(originalMap));
+            iteration = 0;
+            totalRemoved = 0;
+            scanningPosition = null;
+            justRemoved.clear();
+            
+            iterationElement.textContent = '0';
+            removedCountElement.textContent = '0';
+            totalCountElement.textContent = '0';
+            
+            startBtn.textContent = 'Start';
+            startBtn.disabled = false;
+            stepBtn.disabled = false;
+            
+            renderGrid(true);
+        }
+
+        async function runAnimation() {
+            if (!isRunning) return;
+            
+            const removed = await step();
+            renderGrid(true);
+            
+            if (removed === 0) {
+                isRunning = false;
+                startBtn.textContent = 'Start';
+                startBtn.disabled = true;
+                stepBtn.disabled = true;
+            } else {
+                animationTimeout = setTimeout(runAnimation, 800 / speedMultiplier);
+            }
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (!isRunning) {
+                isRunning = true;
+                startBtn.textContent = 'Running...';
+                startBtn.disabled = true;
+                stepBtn.disabled = true;
+                runAnimation();
+            }
+        });
+
+        stepBtn.addEventListener('click', async () => {
+            stepBtn.disabled = true;
+            const removed = await step();
+            renderGrid(true);
+            
+            if (removed === 0) {
+                startBtn.disabled = true;
+                stepBtn.disabled = true;
+            } else {
+                stepBtn.disabled = false;
+            }
+        });
+
+        resetBtn.addEventListener('click', reset);
+
+        // Initial render
+        renderGrid(true);
+    </script>
+</body>
+</html>
