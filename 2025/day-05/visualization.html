@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day 5 - Range Merging Visualization</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        
+        body {
+            font-family: 'VT323', monospace;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0a0e0a;
+            min-height: 100vh;
+            color: #33cc66;
+        }
+        
+        .container {
+            background: #0f140f;
+            border: 3px solid #33cc66;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(51, 204, 102, 0.15);
+        }
+        
+        h1 {
+            color: #4db87f;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 48px;
+            text-shadow: 0 0 5px rgba(77, 184, 127, 0.3);
+            letter-spacing: 4px;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #3da66b;
+            margin-bottom: 30px;
+            font-size: 24px;
+            letter-spacing: 2px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 20px;
+            font-family: 'VT323', monospace;
+            border: 2px solid #33cc66;
+            background: #0f140f;
+            color: #33cc66;
+            cursor: pointer;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #1a2e1a;
+            border-color: #4db87f;
+            color: #4db87f;
+            box-shadow: 0 0 8px rgba(51, 204, 102, 0.3);
+        }
+        
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            border-color: #33cc66;
+            color: #33cc66;
+        }
+        
+        .btn-secondary {
+            border-color: #33cc66;
+            color: #33cc66;
+        }
+        
+        .btn-tertiary {
+            border-color: #33cc66;
+            color: #33cc66;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #0f140f;
+            border: 2px solid #33cc66;
+            padding: 20px;
+            text-align: center;
+            box-shadow: inset 0 0 5px rgba(51, 204, 102, 0.1);
+        }
+        
+        .stat-label {
+            font-size: 20px;
+            color: #3da66b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .stat-value {
+            font-size: 48px;
+            color: #4db87f;
+            text-shadow: 0 0 5px rgba(77, 184, 127, 0.3);
+        }
+        
+        .visualization {
+            background: #0a0e0a;
+            border: 2px solid #33cc66;
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            box-shadow: inset 0 0 10px rgba(51, 204, 102, 0.05);
+        }
+        
+        .range-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            min-height: 40px;
+        }
+        
+        .range-label {
+            width: 100px;
+            font-size: 20px;
+            color: #3da66b;
+            letter-spacing: 1px;
+        }
+        
+        .range-container {
+            flex: 1;
+            position: relative;
+            height: 40px;
+        }
+        
+        .current-indicator {
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-top: 8px solid transparent;
+            border-bottom: 8px solid transparent;
+            border-left: 12px solid #4db87f;
+            animation: slideIn 0.3s ease-out;
+            filter: drop-shadow(0 0 3px rgba(77, 184, 127, 0.3));
+        }
+        
+        @keyframes slideIn {
+            from {
+                left: -40px;
+                opacity: 0;
+            }
+            to {
+                left: -30px;
+                opacity: 1;
+            }
+        }
+        
+        .range-bar {
+            position: absolute;
+            height: 30px;
+            border: 2px solid #33cc66;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: #33cc66;
+            transition: all 0.5s ease;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(51, 204, 102, 0.2);
+        }
+        
+        .range-bar:hover {
+            box-shadow: 0 0 8px rgba(51, 204, 102, 0.4);
+        }
+        
+        .range-bar.original {
+            background: #0f1c0f;
+        }
+        
+        .range-bar.merged {
+            background: #1a331a;
+            box-shadow: 0 0 8px rgba(51, 204, 102, 0.3);
+        }
+        
+        .range-bar.removed {
+            background: #0a0e0a;
+            border-color: #1a3d1a;
+            color: #1a3d1a;
+            opacity: 0.3;
+        }
+        
+        .range-bar.highlight {
+            background: #2d804d;
+            color: #0f140f;
+            animation: pulse 1s ease-in-out;
+        }
+        
+        .range-bar.fading {
+            animation: fadeAway 1.5s ease-out forwards;
+        }
+        
+        .range-bar.animating {
+            transition: left 2.5s ease-in-out, width 2.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes fadeAway {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+        }
+        
+        .merge-info {
+            background: #0f140f;
+            border: 2px solid #33cc66;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: #4db87f;
+            text-shadow: 0 0 3px rgba(77, 184, 127, 0.2);
+        }
+        
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .speed-control label {
+            color: #3da66b;
+            font-size: 20px;
+            text-transform: uppercase;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            -webkit-appearance: none;
+            background: #0f140f;
+            border: 2px solid #33cc66;
+            height: 8px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #33cc66;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(51, 204, 102, 0.3);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #33cc66;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 5px rgba(51, 204, 102, 0.3);
+        }
+        
+        #speedValue {
+            color: #3da66b;
+            font-size: 20px;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+            padding: 15px;
+            background: #0f140f;
+            border: 2px solid #33cc66;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #3da66b;
+            font-size: 18px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 20px;
+            border: 2px solid #33cc66;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>2025 - Day 5</h1>
+        <div class="subtitle">Range Merging Visualization</div>
+        
+        <div class="controls">
+            <button class="btn-primary" onclick="startVisualization()">▶ Start</button>
+            <button class="btn-secondary" onclick="stepForward()" id="stepBtn">⏭ Step</button>
+            <button class="btn-tertiary" onclick="reset()">↻ Reset</button>
+            <div class="speed-control">
+                <label>Speed:</label>
+                <input type="range" id="speedSlider" min="0.5" max="3" value="1" step="0.1">
+                <span id="speedValue">1.0x</span>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Ranges</div>
+                <div class="stat-value" id="totalRanges">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Current Step</div>
+                <div class="stat-value" id="currentStep">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Merged Ranges</div>
+                <div class="stat-value" id="mergedCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Fresh Items</div>
+                <div class="stat-value" id="freshCount">-</div>
+            </div>
+        </div>
+        
+        <div id="mergeInfo"></div>
+        
+        <div class="visualization" id="visualization"></div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #0f1c0f;"></div>
+                <span>Original Range</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #1a331a;"></div>
+                <span>Processed Range</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #2d804d;"></div>
+                <span>Currently Processing</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const inputData = `3-5
+10-14
+16-20
+12-18`;
+
+        let ranges = [];
+        let originalRanges = [];
+        let currentStep = 0;
+        let isAnimating = false;
+        let animationInterval = null;
+        let minValue = Infinity;
+        let maxValue = -Infinity;
+
+        let isSorted = false;
+
+        function parseInput() {
+            ranges = inputData.split('\n')
+                .map(line => {
+                    const [min, max] = line.split('-').map(Number);
+                    return { min, max, removed: false };
+                });
+            
+            // Don't sort yet - will be done with animation
+            isSorted = false;
+            originalRanges = JSON.parse(JSON.stringify(ranges));
+            
+            minValue = Math.min(...ranges.map(r => r.min));
+            maxValue = Math.max(...ranges.map(r => r.max));
+            
+            document.getElementById('totalRanges').textContent = ranges.length;
+        }
+
+        function normalize(value) {
+            return ((value - minValue) / (maxValue - minValue)) * 100;
+        }
+
+        function formatNumber(num) {
+            return num.toLocaleString();
+        }
+
+        function renderRanges(highlightIndex = -1, animationState = null) {
+            const viz = document.getElementById('visualization');
+            viz.innerHTML = '';
+            
+            // Show all ranges for test data
+            const displayRanges = ranges;
+            
+            displayRanges.forEach((range, index) => {
+                const row = document.createElement('div');
+                row.className = 'range-row';
+                
+                const label = document.createElement('div');
+                label.className = 'range-label';
+                label.textContent = `Range ${index}`;
+                
+                const container = document.createElement('div');
+                container.className = 'range-container';
+                
+                // Add indicator for current range
+                if (index === currentStep && currentStep > 0) {
+                    const indicator = document.createElement('div');
+                    indicator.className = 'current-indicator';
+                    container.appendChild(indicator);
+                }
+                
+                const bar = document.createElement('div');
+                bar.className = 'range-bar';
+                
+                if (range.removed && !range.fading) {
+                    bar.classList.add('removed');
+                } else if (range.fading && index === highlightIndex - 1) {
+                    bar.classList.add('fading');
+                } else if (range.animating && index === highlightIndex) {
+                    bar.classList.add('animating');
+                    bar.classList.add('merged');
+                } else if (animationState === 'highlight' && (index === highlightIndex || index === highlightIndex - 1)) {
+                    bar.classList.add('highlight');
+                } else if (index <= currentStep && !range.removed && currentStep > 0) {
+                    // Range has been processed (either merged or compared)
+                    bar.classList.add('merged');
+                } else {
+                    bar.classList.add('original');
+                }
+                
+                const left = normalize(range.min);
+                const width = normalize(range.max) - left;
+                
+                bar.style.left = left + '%';
+                bar.style.width = width + '%';
+                bar.title = `${formatNumber(range.min)} - ${formatNumber(range.max)} (${formatNumber(range.max - range.min + 1)} items)`;
+                
+                container.appendChild(bar);
+                row.appendChild(label);
+                row.appendChild(container);
+                viz.appendChild(row);
+            });
+        }
+
+        function calculateFreshCount() {
+            let fresh = 0;
+            for (const range of ranges) {
+                if (range.min === 0 && range.max === 0) continue;
+                if (range.removed) continue;
+                fresh += range.max - range.min + 1;
+            }
+            return fresh;
+        }
+
+        async function sortRangesWithAnimation() {
+            if (isSorted) return;
+            
+            const speedMultiplier = parseFloat(document.getElementById('speedSlider').value);
+            const sortDelay = 1500 / speedMultiplier;
+            
+            // Visual feedback that we're sorting
+            const mergeInfo = document.getElementById('mergeInfo');
+            mergeInfo.innerHTML = '<strong>Sorting ranges by minimum value...</strong>';
+            mergeInfo.style.display = 'block';
+            
+            // Show initial unsorted state
+            renderRanges();
+            await new Promise(resolve => setTimeout(resolve, sortDelay));
+            
+            // Get the visualization element
+            const viz = document.getElementById('visualization');
+            
+            // Create sorted version
+            const sorted = [...ranges].sort((a, b) => a.min - b.min);
+            
+            // Animate each bar moving to its sorted position
+            ranges.forEach((range, index) => {
+                const sortedIndex = sorted.findIndex(r => r.min === range.min && r.max === range.max);
+                if (sortedIndex !== index) {
+                    const row = viz.children[index];
+                    const bar = row.querySelector('.range-bar');
+                    
+                    // Add transition
+                    bar.style.transition = `all ${sortDelay}ms ease-in-out`;
+                    row.style.transition = `transform ${sortDelay}ms ease-in-out`;
+                    
+                    // Calculate vertical offset
+                    const offset = (sortedIndex - index) * 55; // 55px per row
+                    row.style.transform = `translateY(${offset}px)`;
+                }
+            });
+            
+            await new Promise(resolve => setTimeout(resolve, sortDelay));
+            
+            // Apply the sort
+            ranges = sorted;
+            originalRanges = JSON.parse(JSON.stringify(ranges));
+            isSorted = true;
+            
+            // Re-render in sorted order
+            renderRanges();
+            await new Promise(resolve => setTimeout(resolve, sortDelay / 2));
+            
+            mergeInfo.innerHTML = '<strong>Sorting complete! Ready to merge overlapping ranges.</strong>';
+            await new Promise(resolve => setTimeout(resolve, sortDelay));
+            mergeInfo.style.display = 'none';
+        }
+
+        async function stepForward() {
+            // Ensure ranges are sorted before first step
+            if (!isSorted) {
+                await sortRangesWithAnimation();
+            }
+            
+            if (currentStep >= ranges.length - 1) {
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                    isAnimating = false;
+                }
+                return false;
+            }
+
+            currentStep++;
+            const i = currentStep;
+            const prevRange = ranges[i - 1];
+            const range = ranges[i];
+
+            const mergeInfo = document.getElementById('mergeInfo');
+            
+            if (prevRange.max >= range.min && !prevRange.removed) {
+                // Merge happens
+                const oldMin = range.min;
+                const oldMax = range.max;
+                const newMin = prevRange.min;
+                const newMax = Math.max(prevRange.max, range.max);
+                
+                mergeInfo.innerHTML = `<strong>Step ${currentStep}:</strong> Merging! Range ${i-1} [${formatNumber(originalRanges[i-1].min)}-${formatNumber(originalRanges[i-1].max)}] overlaps with Range ${i} [${formatNumber(oldMin)}-${formatNumber(oldMax)}]. New merged range: [${formatNumber(newMin)}-${formatNumber(newMax)}]`;
+                mergeInfo.style.display = 'block';
+                
+                // Get speed multiplier
+                const speedMultiplier = parseFloat(document.getElementById('speedSlider').value);
+                const highlightDuration = 500 / speedMultiplier;
+                const animateDuration = 2500 / speedMultiplier;
+                const fadeDuration = 1500 / speedMultiplier;
+                
+                // Step 1: Highlight both ranges
+                renderRanges(i, 'highlight');
+                await new Promise(resolve => setTimeout(resolve, highlightDuration));
+                
+                // Step 2: Animate current range's min and max to new values
+                range.animating = true;
+                
+                // Get the current bar element
+                const viz = document.getElementById('visualization');
+                const currentBar = viz.children[i].querySelector('.range-bar');
+                
+                // Add animating class and set transition duration based on speed
+                currentBar.style.transition = `left ${animateDuration}ms ease-in-out, width ${animateDuration}ms ease-in-out`;
+                currentBar.classList.add('animating');
+                currentBar.classList.add('merged');
+                currentBar.offsetHeight; // Force reflow
+                
+                // Now animate to new position
+                const newLeft = normalize(newMin);
+                const newWidth = normalize(newMax) - newLeft;
+                currentBar.style.left = newLeft + '%';
+                currentBar.style.width = newWidth + '%';
+                currentBar.title = `${formatNumber(newMin)} - ${formatNumber(newMax)} (${formatNumber(newMax - newMin + 1)} items)`;
+                
+                // Update the data
+                range.min = newMin;
+                range.max = newMax;
+                
+                await new Promise(resolve => setTimeout(resolve, animateDuration));
+                
+                // Step 3: Fade away the previous range
+                delete range.animating;
+                prevRange.fading = true;
+                const prevBar = viz.children[i - 1].querySelector('.range-bar');
+                prevBar.style.animation = `fadeAway ${fadeDuration}ms ease-out forwards`;
+                renderRanges(i, 'fading');
+                await new Promise(resolve => setTimeout(resolve, fadeDuration));
+                
+                // Step 4: Remove the previous range
+                prevRange.max = 0;
+                prevRange.min = 0;
+                prevRange.removed = true;
+                delete prevRange.fading;
+            } else {
+                mergeInfo.innerHTML = `<strong>Step ${currentStep}:</strong> No overlap. Range ${i-1} [${formatNumber(originalRanges[i-1].min)}-${formatNumber(originalRanges[i-1].max)}] and Range ${i} [${formatNumber(range.min)}-${formatNumber(range.max)}] remain separate.`;
+                mergeInfo.style.display = 'block';
+            }
+
+            document.getElementById('currentStep').textContent = currentStep;
+            document.getElementById('mergedCount').textContent = ranges.filter(r => r.removed).length;
+            document.getElementById('freshCount').textContent = formatNumber(calculateFreshCount());
+            
+            renderRanges();
+            return true;
+        }
+
+        async function startVisualization() {
+            if (isAnimating) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+                isAnimating = false;
+                return;
+            }
+
+            isAnimating = true;
+            const speed = parseInt(document.getElementById('speedSlider').value);
+            
+            async function runStep() {
+                if (isAnimating) {
+                    const hasMore = await stepForward();
+                    if (hasMore) {
+                        setTimeout(runStep, speed);
+                    } else {
+                        isAnimating = false;
+                    }
+                }
+            }
+            
+            runStep();
+        }
+
+        function reset() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            isAnimating = false;
+            currentStep = 0;
+            parseInput();
+            document.getElementById('currentStep').textContent = '0';
+            document.getElementById('mergedCount').textContent = '0';
+            document.getElementById('freshCount').textContent = formatNumber(calculateFreshCount());
+            document.getElementById('mergeInfo').style.display = 'none';
+            renderRanges();
+        }
+
+        // Speed slider update
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            document.getElementById('speedValue').textContent = value.toFixed(1) + 'x';
+        });
+
+        // Initialize
+        parseInput();
+        renderRanges();
+        document.getElementById('freshCount').textContent = formatNumber(calculateFreshCount());
+    </script>
+</body>
+</html>
